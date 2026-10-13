@@ -3,7 +3,7 @@
 //  dist/index.html            → doğrudan açılabilen / GitHub Pages’e konabilen tam sayfa
 // React ve KaTeX betikleri cdnjs’ten yüklenir; KaTeX stilleri ve fontları sayfaya gömülür.
 import { build } from "esbuild";
-import { readFileSync, writeFileSync, mkdirSync, statSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, statSync, readdirSync, existsSync, copyFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -82,10 +82,12 @@ const body = `<div id="root"><div style="min-height:100vh;display:grid;place-ite
 <script>${js}</script>`;
 
 const artifact = `${title}\n${fonts}\n<style>${css}\n${kcss}</style>\n${body}\n`;
-const full = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090E22">${title}${fonts}<style>${css}\n${kcss}</style></head><body>${body}</body></html>\n`;
+const full = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090E22"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="FormUp">${title}${fonts}<style>${css}\n${kcss}</style></head><body>${body}<script>if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))addEventListener("load",()=>navigator.serviceWorker.register("/sw.js"));</script></body></html>\n`;
 
 mkdirSync(join(root, "dist"), { recursive: true });
 writeFileSync(join(root, "dist/formup.artifact.html"), artifact);
 writeFileSync(join(root, "dist/index.html"), full);
+// PWA dosyaları (manifest, service worker, ikonlar) → dist
+for (const f of readdirSync(join(root, "public"))) copyFileSync(join(root, "public", f), join(root, "dist", f));
 const kb = (p) => (statSync(join(root, p)).size / 1024).toFixed(0) + " KB";
 console.log(`${chunks.length} içerik parçası · ${labs.length} lab · js ${(js.length / 1024).toFixed(0)} KB · artifact ${kb("dist/formup.artifact.html")} · index ${kb("dist/index.html")}`);
