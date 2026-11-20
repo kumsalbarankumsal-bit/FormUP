@@ -33,6 +33,7 @@ Kaydırıcıyı oynat, formülün neden öyle olduğunu gör.
 | --- | --- |
 | **Yol** | Duolingo tarzı bir uzay rotası. Her durak 3–4 formüllük bir ders; ünite sonunda taç sınavı. Bildiğin üniteyi kısa bir sınavla atlayabilirsin. |
 | **Ders** | Tanış → doğru formülü seç / doğru mu? → boşlukları doldur → hatırla. Araya senaryo sorusu ve İngilizce terim sorusu girer. Yanlışlar kısa bir “tekrar bak” ile dersin içinde yeniden gelir. “Zaten biliyorum” dersen tek soruyla kanıtlarsın. |
+| **Akış** | Reels gibi tam ekran, dikey kaydırmalı öğrenme. Yeni formüller hikâye adımlarıyla tanıtılır, ardından bilgi, tuzak, İngilizce terim, canlı hesap ve laboratuvar gönderileri gelir; araya hızlı sorular (seç, kartı sağa/sola fırlat, boşluk doldur, sayısal) girer. Doğru cevaplar formülü öğrenilmiş sayar, vadesi gelen tekrarlar FSRS ile notlanır, günde en fazla 15 yeni formül. Çift dokun = kaydet; "Kaydedilenler" sekmesi yalnızca kaydettiklerinden akar. |
 | **Gökyüzü** | Her formül bir yıldız. Parlaklığı, o formülü şu an hatırlama olasılığın. Tekrar etmezsen yıldız söner. |
 | **Tekrar** | Zamanlama **FSRS** algoritmasıyla: her formülün hafıza stabilitesi ve zorluğu tahmin edilir. Hafıza güçlendikçe sorular zorlaşır: tanıma → hatırlama → gerçek bir soruda uygulama. |
 | **Kitapçık** | IB kitapçığının iki dilli, açıklamalı hâli; ayrıca “Ezber” (kitapçıkta olmayanlar), “Temel” ve aranabilir bir **sözlük**. |

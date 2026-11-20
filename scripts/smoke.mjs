@@ -14,7 +14,7 @@ const LOCAL = {
   "react-dom.production.min.js": "node_modules/react-dom/umd/react-dom.production.min.js",
   "katex.min.js": "node_modules/katex/dist/katex.min.js",
 };
-const exe = process.env.CHROME || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+const exe = process.env.CHROME || "/opt/pw-browsers/chromium";
 const browser = await chromium.launch({ executablePath: exe });
 const errors = [];
 const W = Number(process.env.W || 390);

@@ -44,7 +44,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewp
 <script>${js.replace(/<\/script/gi, "<\\/script")}</script></body></html>`;
 const file = join(out, `${id}.html`);
 writeFileSync(file, html);
-const browser = await chromium.launch({ executablePath: process.env.CHROME || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await chromium.launch({ executablePath: process.env.CHROME || "/opt/pw-browsers/chromium" });
 const page = await browser.newPage({ viewport: { width: 390, height: 900 }, deviceScaleFactor: 2 });
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));

@@ -1,6 +1,6 @@
 /* FormUp v2: uygulama kabuğu. Durum, kalıcılık, sekmeler, dersler, oyunlar ve kutlamalar. */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Rocket, Sparkles, BookOpen, Gamepad2, User, Flame, Award } from "lucide-react";
+import { Rocket, Sparkles, BookOpen, Gamepad2, User, Flame, Award, Clapperboard } from "lucide-react";
 import Path, { NodeSheet } from "./ui/Path.jsx";
 import Sky from "./ui/Sky.jsx";
 import Booklet from "./ui/Booklet.jsx";
@@ -9,6 +9,8 @@ import Profile from "./ui/Profile.jsx";
 import Lesson from "./ui/Lesson.jsx";
 import Detail from "./ui/Detail.jsx";
 import Onboarding from "./ui/Onboarding.jsx";
+import Feed from "./ui/Feed.jsx";
+import { feedOf } from "./lib/feed.js";
 import Pi from "./ui/Pi.jsx";
 import { EnCtx, Cosmos, Burst, Sheet, Bi } from "./ui/common.jsx";
 import {
@@ -23,6 +25,7 @@ import { dayKey } from "./lib/util.js";
 
 const TABS = [
   { id: "path", hash: "yol", tr: "Yol", en: "Path", icon: Rocket },
+  { id: "feed", hash: "akis", tr: "Akış", en: "Reels", icon: Clapperboard },
   { id: "sky", hash: "gokyuzu", tr: "Gökyüzü", en: "Sky", icon: Sparkles },
   { id: "book", hash: "kitapcik", tr: "Kitapçık", en: "Booklet", icon: BookOpen },
   { id: "arcade", hash: "oyun", tr: "Oyun", en: "Games", icon: Gamepad2 },
@@ -190,6 +193,27 @@ export default function App() {
     return { ...n, labsSeen: seen, labsDay: { ...(n.labsDay || {}), [id]: k } };
   }), [update]);
 
+  /* ---- akış (Reels) ---- */
+  const feedMemo = useRef(null);
+  const feedAct = {
+    answer: onAnswer,
+    grade: onGrade,
+    known: onKnown,
+    lab: onLab,
+    openCard: (id) => setDetail(id),
+    learnedNew: () => update((s) => {
+      const f = feedOf(s), k = dayKey(Date.now());
+      return { ...s, feed: { ...f, day: k, newN: (f.day === k ? f.newN : 0) + 1 } };
+    }),
+    toggleSave: (cid) => update((s) => {
+      const f = feedOf(s);
+      const saved = { ...f.saved };
+      if (saved[cid]) delete saved[cid]; else saved[cid] = Date.now();
+      return { ...s, feed: { ...f, saved } };
+    }),
+    dust: (n) => { update((s) => addXp(s, Date.now(), 0, n)); play("coin", S.sound); },
+  };
+
   const onFinish = (sum) => {
     const plan = session;
     setSession(null);
@@ -302,9 +326,10 @@ export default function App() {
 
   return (
     <EnCtx.Provider value={S.showEn}>
-      <div className="fu" data-mode={mode} lang="tr">
-        <Cosmos dark={mode === "dark"} />
-        <div className="shell">
+      <div className={"fu" + (tab === "feed" ? " reels-mode" : "")} data-mode={mode} lang="tr">
+        {tab !== "feed" && <Cosmos dark={mode === "dark"} />}
+        {tab === "feed" && <Feed state={state} now={now} act={feedAct} memo={feedMemo} />}
+        <div className="shell" hidden={tab === "feed"}>
           <header className="topbar">
             <button className="wordmark" onClick={() => setTab("path")} style={{ background: "none", border: 0, padding: 0, cursor: "pointer", color: "inherit" }} aria-label="FormUp: yola dön">
               Form<sup>up</sup>
@@ -317,7 +342,7 @@ export default function App() {
           </header>
 
           <main>
-            {tab === "path" && <Path state={state} now={now} openNode={setNodeTarget} startReview={startReview} onClaim={onClaim} onChest={onChest} />}
+            {tab === "path" && <Path state={state} now={now} openNode={setNodeTarget} startReview={startReview} onClaim={onClaim} onChest={onChest} openFeed={() => setTab("feed")} />}
             {tab === "sky" && <Sky state={state} now={now} openCard={setDetail} startReview={startReview} />}
             {tab === "book" && <Booklet state={state} openCard={setDetail} />}
             {tab === "arcade" && <Arcade state={state} onPlay={setGame} />}

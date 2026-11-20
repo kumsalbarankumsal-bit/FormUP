@@ -54,7 +54,7 @@ export function DailyCard({ state, now, onClaim, onChest }) {
   );
 }
 
-export default function Path({ state, now, openNode, startReview, onClaim, onChest }) {
+export default function Path({ state, now, openNode, startReview, onClaim, onChest, openFeed }) {
   const due = dueIds(state, now).length;
   const cur = currentNode(state);
   const curRef = useRef(null);
@@ -81,6 +81,14 @@ export default function Path({ state, now, openNode, startReview, onClaim, onChe
         <button className="btn gold lg block" onClick={startReview} style={{ justifyContent: "space-between" }}>
           <span className="row" style={{ gap: 10 }}><Sparkles size={20} /> <span style={{ textAlign: "left" }}>Yıldızları parlat<span lang="en" className="en small" style={{ display: "block", color: "inherit", opacity: .75 }}>Polish your stars</span></span></span>
           <span className="display num" style={{ fontSize: 20 }}>{due}</span>
+        </button>
+      )}
+
+      {openFeed && (
+        <button className="feed-promo" onClick={openFeed}>
+          <span className="fp-phone" aria-hidden="true"><i /><i /><i /></span>
+          <span className="fp-text"><b>Sıkıldın mı? Kaydırarak öğren</b><span lang="en" className="en small">Bored? Learn by scrolling</span></span>
+          <span className="fp-go">Akış ›</span>
         </button>
       )}
 
