@@ -32,6 +32,7 @@ export function freshState() {
     stats: { trapsCaught: 0, sessions: 0, perfect: 0, games: 0, terms: 0 },
     owned: { none: true }, labsSeen: {}, labsDay: {}, quests: null,
     feed: { saved: {}, day: "", newN: 0 },
+    drill: { sk: {}, bloom: "", n: 0 },
   };
 }
 export function migrate(s) {
@@ -42,7 +43,7 @@ export function migrate(s) {
     settings: { ...f.settings, ...(s.settings || {}) },
     streak: { ...f.streak, ...(s.streak || {}) }, best: { ...f.best, ...(s.best || {}) }, stats: { ...f.stats, ...(s.stats || {}) },
     cards: s.cards || {}, lessons: s.lessons || {}, units: s.units || {}, open: s.open || {}, days: s.days || {},
-    ach: s.ach || {}, owned: { none: true, ...(s.owned || {}) }, labsSeen: s.labsSeen || {}, labsDay: s.labsDay || {}, feed: { saved: {}, day: "", newN: 0, ...(s.feed || {}) },
+    ach: s.ach || {}, owned: { none: true, ...(s.owned || {}) }, labsSeen: s.labsSeen || {}, labsDay: s.labsDay || {}, feed: { saved: {}, day: "", newN: 0, ...(s.feed || {}) }, drill: { sk: {}, bloom: "", n: 0, ...(s.drill || {}) },
   };
 }
 

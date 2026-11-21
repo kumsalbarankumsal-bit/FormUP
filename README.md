@@ -34,6 +34,7 @@ Kaydırıcıyı oynat, formülün neden öyle olduğunu gör.
 | **Yol** | Duolingo tarzı bir uzay rotası. Her durak 3–4 formüllük bir ders; ünite sonunda taç sınavı. Bildiğin üniteyi kısa bir sınavla atlayabilirsin. |
 | **Ders** | Tanış → doğru formülü seç / doğru mu? → boşlukları doldur → hatırla. Araya senaryo sorusu ve İngilizce terim sorusu girer. Yanlışlar kısa bir “tekrar bak” ile dersin içinde yeniden gelir. “Zaten biliyorum” dersen tek soruyla kanıtlarsın. |
 | **Akış** | Reels gibi tam ekran, dikey kaydırmalı öğrenme. Yeni formüller hikâye adımlarıyla tanıtılır, ardından bilgi, tuzak, İngilizce terim, canlı hesap ve laboratuvar gönderileri gelir; araya hızlı sorular (seç, kartı sağa/sola fırlat, boşluk doldur, sayısal) girer. Doğru cevaplar formülü öğrenilmiş sayar, vadesi gelen tekrarlar FSRS ile notlanır, günde en fazla 15 yeni formül. Çift dokun = kaydet; "Kaydedilenler" sekmesi yalnızca kaydettiklerinden akar. |
+| **Akış · Hız** | Bitmeyen işlem ve hafıza antrenmanı: 42 hız becerisi (zihinden dört işlem, kesir–yüzde, üs–kök–log, trigonometri, dizi, olasılık, türev–integral…) ve LOGOS'un 26 becerisi (çoktan seçmeli + "hata avı"), en az ~786.000 farklı soru. Her beceride seviye kendiliğinden ayarlanır, süre halkası hızı ölçer; yanlışta hatanın türü (işaret, işlem önceliği, dağıtma…) ve çözüm adımları gösterilir. Görülen sorular Bloom filtresiyle hatırlanır: aynı soru bir daha gelmez (yalnızca 12², sin 30° gibi ezber bilgileri en fazla haftada bir döner). |
 | **Gökyüzü** | Her formül bir yıldız. Parlaklığı, o formülü şu an hatırlama olasılığın. Tekrar etmezsen yıldız söner. |
 | **Tekrar** | Zamanlama **FSRS** algoritmasıyla: her formülün hafıza stabilitesi ve zorluğu tahmin edilir. Hafıza güçlendikçe sorular zorlaşır: tanıma → hatırlama → gerçek bir soruda uygulama. |
 | **Kitapçık** | IB kitapçığının iki dilli, açıklamalı hâli; ayrıca “Ezber” (kitapçıkta olmayanlar), “Temel” ve aranabilir bir **sözlük**. |
@@ -75,4 +76,5 @@ tuzakların ise **yanlış** olması.
 - `src/data/v2/units.js`, `index.js`, `parse.js`, `meta.js` — üniteler, yol, ayrıştırıcı, rütbe/rozet/görevler
 - `src/lib/fsrs.js` — FSRS zamanlayıcısı; `src/lib/learn.js` — yol, ders/tekrar/sınav planları, ekonomi
 - `src/labs/*.jsx` — laboratuvarlar (`kit.jsx`: ortak çizim ve kontrol bileşenleri)
+- `src/data/drills/speed.js` — hız bankası; `src/data/logos/` — LOGOS soru motoru (github.com/kumsalbarankumsal-bit/logos'tan taşındı, mathjs yerine `expr.js`); `src/lib/drills.js` — beceri seçimi, seviye uyarlama, tekrar önleme
 - `src/ui/*` — ekranlar (Yol, Gökyüzü, Kitapçık, Oyun, Profil, Ders, Formül ayrıntısı, Karşılama, Pi)

@@ -41,7 +41,7 @@ test("Akış: vadesi gelen kart tekrar sorusu olarak gelir ve FSRS notu döner",
   const id = CARDS[0].id;
   s = gradeCard(s, Date.now() - 5 * 86400e3, id, 3, { isNew: true });
   const f = makeFeed(() => s);
-  const posts = f.take(25);
+  const posts = f.take(80);
   const rev = posts.find((p) => p.kind === "quiz" && p.purpose === "review" && p.cid === id);
   assert.ok(rev, "tekrar sorusu gelmeli");
   assert.equal(f.answered(rev, false, 2000).grade, 1);

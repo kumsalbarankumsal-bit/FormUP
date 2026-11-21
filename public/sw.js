@@ -1,5 +1,5 @@
 /* FormUp service worker: uygulama kabuğu ve CDN dosyaları önbellekte, internetsiz de açılır. */
-const CACHE = "formup-v3";
+const CACHE = "formup-v4";
 const CORE = ["/", "/index.html", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));

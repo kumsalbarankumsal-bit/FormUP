@@ -10,6 +10,7 @@ import LiveCalc from "./LiveCalc.jsx";
 import { LAB_MAP } from "../labs/index.js";
 import { BY_ID, UNIT, GEN, mcOptions, tfCandidate, nameOptions, whichOptions, clozeBank, today } from "../lib/learn.js";
 import { makeFeed, feedOf, newLeft, numericOptions, FACT_LABEL, FEED_NEW_CAP } from "../lib/feed.js";
+import { SKILL, logosTex, HATA, LG } from "../lib/drills.js";
 import { rng, pick, vibrate } from "../lib/util.js";
 import { play } from "../lib/sound.js";
 
@@ -170,6 +171,27 @@ export default function Feed({ state, now, act, memo }) {
     rerender();
   };
 
+  /** İşlem antrenmanı cevaplandı: XP (hızlıysa bonus), beceri seviyesi uyarlanır, soru "görüldü" olur */
+  const answerDrill = (post, ok, e, extra = {}) => {
+    if (sess.results[post.key]) return;
+    const ms = Date.now() - shownAt.current;
+    const q = post.d;
+    const fast = ok && ms <= q.sec * 1000;
+    sess.combo = ok ? sess.combo + 1 : 0;
+    const combo = sess.combo;
+    const xp = ok ? 4 + (fast ? 3 : 0) + Math.min(combo - 1, 5) : 0;
+    sess.results[post.key] = { ok, xp, combo, ms, fast, ...extra };
+    sess.engine.drillAnswered();
+    act.answer({ cid: null, mode: "d", ok, ms, xp, combo });
+    act.drill(q, ok, ms);
+    play(ok ? "correct" : "wrong", S.sound);
+    vibrate(ok ? (fast ? [8, 30, 8] : 12) : [30, 40, 30], S.haptics);
+    const x = e && e.clientX ? e.clientX : window.innerWidth / 2, y = e && e.clientY ? e.clientY : window.innerHeight / 2;
+    if (ok) { addFx(x, y, "xp", fast ? `⚡ +${xp} XP` : `+${xp} XP`); if (e && e.clientX) sparkleAt(e.clientX, e.clientY, fast ? 20 : 12); }
+    if (ok && combo >= 3 && combo % 3 === 0) addFx(window.innerWidth / 2, window.innerHeight * 0.35, "combo", `${combo}`);
+    rerender();
+  };
+
   const claimKnown = (post) => {
     const q = sess.engine.claimKnown(post.cid);
     sess.posts = [...sess.posts.slice(0, sess.active + 1), q, ...sess.posts.slice(sess.active + 1)];
@@ -189,7 +211,8 @@ export default function Feed({ state, now, act, memo }) {
       <div className="reels-top">
         <div className="reels-tabs" role="tablist">
           <button role="tab" aria-selected={mode === "foryou"} className={mode === "foryou" ? "on" : ""} onClick={() => setMode("foryou")}>Sana özel<span lang="en">For you</span></button>
-          <button role="tab" aria-selected={mode === "saved"} className={mode === "saved" ? "on" : ""} onClick={() => setMode("saved")}>Kaydedilenler<span lang="en">Saved</span></button>
+          <button role="tab" aria-selected={mode === "speed"} className={mode === "speed" ? "on" : ""} onClick={() => setMode("speed")}>Hız<span lang="en">Speed</span></button>
+          <button role="tab" aria-selected={mode === "saved"} className={mode === "saved" ? "on" : ""} onClick={() => setMode("saved")}>Kayıtlı<span lang="en">Saved</span></button>
         </div>
         <div className="reels-stats">
           {combo >= 2 && <span className="r-combo" key={combo}><Flame size={15} />{combo}</span>}
@@ -208,11 +231,11 @@ export default function Feed({ state, now, act, memo }) {
       <div className="reels" ref={scroller} onScroll={onScroll} aria-label="Öğrenme akışı">
         {sess.posts.map((p, i) => (Math.abs(i - active) <= 2
           ? <Reel key={p.key} post={p} index={i} active={i === active} state={state} result={sess.results[p.key]} saved={!!(p.cid && saved[p.cid])}
-            voice={voice} onAnswer={answer} onLike={like} onKnown={claimKnown} onLab={openLab} act={act} sess={sess} left={left} goNext={goNext} addFx={addFx} />
+            voice={voice} onAnswer={answer} onDrill={answerDrill} onLike={like} onKnown={claimKnown} onLab={openLab} act={act} sess={sess} left={left} goNext={goNext} addFx={addFx} />
           : <section key={p.key} className="reel ghost" aria-hidden="true" />))}
       </div>
 
-      {hint && active === 0 && <div className="swipe-hint" aria-hidden="true"><ChevronDown size={22} /><span>Kaydır · Swipe</span></div>}
+      {hint && active === 0 && !sess.results[(sess.posts[0] || {}).key] && <div className="swipe-hint" aria-hidden="true"><ChevronDown size={22} /><span>Kaydır · Swipe</span></div>}
 
       <div className="fx-layer" aria-hidden="true">
         {fx.map((f) => (
@@ -241,10 +264,11 @@ export default function Feed({ state, now, act, memo }) {
 /* =====================================================================
    Tek gönderi
    ===================================================================== */
-function Reel({ post, index, active, state, result, saved, voice, onAnswer, onLike, onKnown, onLab, act, sess, left, goNext, addFx }) {
+function Reel({ post, index, active, state, result, saved, voice, onAnswer, onDrill, onLike, onKnown, onLab, act, sess, left, goNext, addFx }) {
   const c = post.cid ? BY_ID[post.cid] : null;
   const u = c ? UNIT[c.u] : null;
-  const planet = u ? u.planet : ["#7C5CFF", "#2A1B6B"];
+  const dk = post.kind === "drill" ? SKILL[post.d.skill] : null;
+  const planet = u ? u.planet : dk ? (dk.src === "speed" ? ["#FF9B3D", "#7A2E12"] : ["#38D3B5", "#123C5A"]) : ["#7C5CFF", "#2A1B6B"];
   const tap = useRef({ t: 0, x: 0, y: 0, timer: null });
   const [paused, setPaused] = useState(false);
   const [seen, setSeen] = useState(!!sess.seen[post.key]);
@@ -277,16 +301,17 @@ function Reel({ post, index, active, state, result, saved, voice, onAnswer, onLi
 
   // her gönderi farklı görünsün: ışık lekelerinin yeri ve vurgu rengi gönderiye göre değişir
   const sd = post.seed || 1;
-  const accent = { intro: "#F2B01E", quiz: "#6B4FE0", chest: "#F2B01E", legend: "#C98A00", goal: "#0E9F6E" }[post.kind]
+  const accent = { intro: "#F2B01E", quiz: "#6B4FE0", chest: "#F2B01E", legend: "#C98A00", goal: "#0E9F6E", drill: dk && dk.src === "speed" ? "#FFB020" : "#6B4FE0" }[post.kind]
     || (post.fact === "trap" ? "#E5533D" : post.fact === "term" ? "#2D6FE0" : post.fact === "hook" ? "#E08A1E" : "#2D9FE0");
   const style = { "--c1": planet[0], "--c2": planet[1], "--c3": accent, "--bx": `${(sd % 37) - 18}vmax`, "--by": `${((sd >> 5) % 31) - 15}vmax`, "--rot": `${sd % 360}deg` };
   const cls = "reel" + (active ? " on" : "") + (seen ? " seen" : "") + (paused ? " paused" : "") + ` k-${post.kind}`;
   let body, caption = null;
-  const ctx = { post, c, u, active, result, onAnswer, state, tapHandler, paused, onKnown, onLab, left, goNext, act, addFx };
+  const ctx = { post, c, u, active, result, onAnswer, onDrill, state, tapHandler, paused, onKnown, onLab, left, goNext, act, addFx };
   switch (post.kind) {
     case "intro": body = <IntroBody {...ctx} />; caption = c.use || c.k || c.n; break;
     case "fact": body = <FactBody {...ctx} />; caption = post.fact === "use" || post.fact === "cond" ? null : c.use || c.k; break;
     case "quiz": body = <QuizBody {...ctx} />; caption = result ? (result.ok ? "Süper! Kaydırmaya devam ⤵" : c.w) : "Kaydırmadan önce cevapla 👀"; break;
+    case "drill": body = <DrillBody {...ctx} />; break;
     case "chest": body = <ChestBody {...ctx} />; break;
     case "legend": body = <LegendBody {...ctx} />; break;
     case "goal": body = <GoalBody {...ctx} />; break;
@@ -320,6 +345,22 @@ function Reel({ post, index, active, state, result, saved, voice, onAnswer, onLi
             </button>
             <span className="disc" aria-hidden="true"><i /></span>
           </aside>
+        )}
+        {dk && (
+          <aside className="rail">
+            <div className={"rail-pi" + (result ? (result.ok ? " happy" : " sad") : "")}>
+              <Pi mood={result ? (result.ok ? "party" : "sad") : "think"} outfit={state.settings.outfit} size={44} />
+            </div>
+            <div className="rail-lv" aria-label={`Seviye ${post.d.lv}`}>{[1, 2, 3].map((i) => <i key={i} className={i <= post.d.lv ? "on" : ""} />)}<span className="rl">Seviye</span></div>
+            <span className="disc" aria-hidden="true"><i /></span>
+          </aside>
+        )}
+        {dk && (
+          <footer className="caption">
+            <div className="cap-head"><b>pi.formup</b><span className="verified"><Check size={10} strokeWidth={4} /></span><span className="cap-tag">#{dk.src === "speed" ? "İşlemHızı" : "LOGOS"}</span><span className="cap-tag gold">{dk.name}</span></div>
+            <div className="cap-text">{result ? (result.ok ? (result.fast ? "Şimşek gibi! Kaydır ⤵" : "Doğru! Bir dahakine daha hızlı ⚡") : "Bu türü yakında tekrar göreceksin.") : "Hızlı ol: süre dolmadan cevapla ⏱"}</div>
+            <div className="cap-music"><span className="note">♪</span><span className="marquee"><span>İşlem Antrenmanı · {dk.name} · Seviye {post.d.lv} · İşlem Antrenmanı · {dk.name} · Seviye {post.d.lv} ·&nbsp;</span></span></div>
+          </footer>
         )}
         {c && (
           <footer className="caption">
@@ -699,6 +740,138 @@ function EmptyBody({ post, state }) {
           : <>Tüm formüller tanıtıldı. Tekrarlar vakti gelince burada belirecek. <span lang="en" className="p-en">Every formula is introduced.</span></>}
       </div>
       {saved && <div className="rv" style={{ "--i": 3 }}><Bookmark size={36} /></div>}
+    </div>
+  );
+}
+
+/* =====================================================================
+   İşlem antrenmanı (LOGOS + hız bankası)
+   ===================================================================== */
+/** LOGOS ifade ağacı (kesir, üs, kök) */
+function Parca({ p }) {
+  if (p === null || p === undefined) return null;
+  if (typeof p === "string" || typeof p === "number") return <span style={{ whiteSpace: "pre-wrap" }}>{String(p)}</span>;
+  if (Array.isArray(p)) return <>{p.map((x, i) => <Parca key={i} p={x} />)}</>;
+  if (p.k === "kesir") return <span className="lg-frac"><span><Parca p={p.p} /></span><i /><span><Parca p={p.q} /></span></span>;
+  if (p.k === "us") return <span><Parca p={p.t} /><sup className="lg-sup"><Parca p={p.u} /></sup></span>;
+  if (p.k === "kok") return <span className="lg-root"><span className="lg-rad">√</span><span className="lg-under"><Parca p={p.i} /></span></span>;
+  return null;
+}
+
+/** Süre halkası: hedef süre boyunca azalır */
+function TimerRing({ sec, running, done }) {
+  return (
+    <span className={"d-timer run" + (done ? " stop" : "")} style={{ "--sec": `${sec}s` }} aria-label={`Hedef süre ${Math.round(sec)} saniye`}>
+      <svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true">
+        <circle cx="22" cy="22" r="18" className="trk" />
+        <circle cx="22" cy="22" r="18" className="val" transform="rotate(-90 22 22)" />
+      </svg>
+      <b>{Math.round(sec)}<small>sn</small></b>
+    </span>
+  );
+}
+
+const short = (t) => String(t).replace(/\\[a-z]+|[{}\s]/g, "").length <= 9;
+
+function DrillBody({ post, active, result, onDrill, state }) {
+  const q = post.d;
+  const k = SKILL[q.skill];
+  const showEn = state.settings.showEn;
+  const L = q.L;
+  const head = (
+    <div className="d-head rv" style={{ "--i": 0 }}>
+      <span className={"p-chip d-chip " + q.src}>{q.src === "speed" ? <><Zap size={14} /> İşlem hızı</> : <>🧩 LOGOS · {LG.GOREV_AD[q.task] || "Seç"}</>}</span>
+      <TimerRing sec={q.sec} running={active && !result} done={!!result} />
+    </div>
+  );
+  const skillLine = <div className="d-skill rv" style={{ "--i": 1 }}>{k.name}{k.en ? <span lang="en"> · {k.en}</span> : null}</div>;
+
+  if (q.src === "speed") {
+    const grid = q.opts.every((o) => short(o.t));
+    return (
+      <div className="post drill">
+        {head}{skillLine}
+        <div className={"d-q rv" + (q.q.replace(/\$[^$]*\$/g, "").trim().length > 3 ? " wordy" : "")} style={{ "--i": 2 }}><Rich text={q.q} /></div>
+        {showEn && q.qe && q.qe !== q.q && <div className="p-en d-en rv" lang="en" style={{ "--i": 3 }}><Rich text={q.qe} /></div>}
+        <div className={"r-opts" + (grid ? " grid2" : "")}>
+          {q.opts.map((o, i) => {
+            const cls = !result ? "" : o.ok ? " right" : result.pick === i ? " wrong" : " dim";
+            return (
+              <button key={i} className={"r-opt d-opt rv" + (grid ? " num" : "") + cls} style={{ "--i": 4 + i }} disabled={!!result}
+                onClick={(e) => onDrill(post, o.ok, e, { pick: i, why: o.why })}><span className="o"><Tex tex={o.t} /></span></button>
+            );
+          })}
+        </div>
+        {result && <DrillVerdict post={post} result={result} />}
+      </div>
+    );
+  }
+
+  if (q.task === "hataAvi") {
+    return (
+      <div className="post drill">
+        {head}{skillLine}
+        <div className="d-ins rv" style={{ "--i": 2 }}>Çözümün <b>bir satırı</b> bozuk. Hangisi? <span lang="en">One line is wrong. Which?</span></div>
+        <div className="d-q logos small rv" style={{ "--i": 3 }}><Parca p={L.parcalar} /></div>
+        <div className="hunt">
+          {L.satirlar.map((row, i) => {
+            const cls = !result ? "" : i === L.bozukIdx ? " bad" : result.pick === i ? " wrong" : " dim";
+            return (
+              <button key={i} className={"hunt-row rv" + cls} style={{ "--i": 4 + i }} disabled={!!result}
+                onClick={(e) => onDrill(post, i === L.bozukIdx, e, { pick: i, tur: i === L.bozukIdx ? null : "dikkat-denetim" })}>
+                <span className="ln">{i + 1}</span>
+                <span className="hr-main"><span className="mono">{LG.guzel(row.i)}</span><small>{row.a}</small></span>
+              </button>
+            );
+          })}
+        </div>
+        {result && <DrillVerdict post={post} result={result} />}
+      </div>
+    );
+  }
+
+  const grid = L.secenekler.every((o) => short(logosTex(o.metin)));
+  return (
+    <div className="post drill">
+      {head}{skillLine}
+      <div className="d-ins rv" style={{ "--i": 2 }}>{L.talimat}</div>
+      <div className="d-q logos rv" style={{ "--i": 3 }}><Parca p={L.parcalar} /></div>
+      <div className={"r-opts" + (grid ? " grid2" : "")}>
+        {L.secenekler.map((o, i) => {
+          const cls = !result ? "" : o.dogru ? " right" : result.pick === i ? " wrong" : " dim";
+          return (
+            <button key={i} className={"r-opt d-opt rv" + (grid ? " num" : "") + cls} style={{ "--i": 4 + i }} disabled={!!result}
+              onClick={(e) => onDrill(post, !!o.dogru, e, { pick: i, tur: o.dogru ? null : o.tur || "hesap-hatasi" })}><span className="o"><Tex tex={logosTex(o.metin)} /></span></button>
+          );
+        })}
+      </div>
+      {result && <DrillVerdict post={post} result={result} />}
+    </div>
+  );
+}
+
+function DrillVerdict({ post, result }) {
+  const q = post.d;
+  const sec = (result.ms / 1000).toFixed(1).replace(".", ",");
+  const tur = result.tur && HATA[result.tur];
+  const steps = q.src === "logos" ? (q.L.adimlar || []) : [];
+  const right = q.src === "speed" ? q.opts.find((o) => o.ok).t : q.task === "hataAvi" ? null : logosTex(q.L.dogru);
+  return (
+    <div className={"verdict d-verdict " + (result.ok ? "ok" : "no")}>
+      <div className="v-head">
+        {result.ok ? <>{result.fast ? <Zap size={20} /> : <Check size={22} strokeWidth={3} />} {result.fast ? "Şimşek!" : "Doğru"} <span className="v-time">{sec} sn</span></>
+          : <><X size={22} strokeWidth={3} /> {tur ? tur.ad : result.why || "Olmadı"}</>}
+        {result.ok && <span className="v-xp">+{result.xp} XP</span>}
+      </div>
+      {!result.ok && (tur || result.why) && <div className="v-why">{tur ? tur.aciklama : `Tipik hata: ${result.why}.`}</div>}
+      {!result.ok && right && <div className="v-right">Doğrusu: <Tex tex={right} /></div>}
+      {!result.ok && q.task === "hataAvi" && <div className="v-right">Bozuk satır: <b>{q.L.bozukIdx + 1}</b></div>}
+      {steps.length > 0 && !result.ok && (
+        <ol className="d-steps">
+          {steps.map((st, i) => <li key={i} style={{ "--i": i }}><span className="mono">{LG.guzel(st.i)}</span><small>{st.a}</small></li>)}
+        </ol>
+      )}
+      <div className="v-next"><ChevronDown size={18} /> kaydır</div>
     </div>
   );
 }

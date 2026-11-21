@@ -11,6 +11,7 @@ import Detail from "./ui/Detail.jsx";
 import Onboarding from "./ui/Onboarding.jsx";
 import Feed from "./ui/Feed.jsx";
 import { feedOf } from "./lib/feed.js";
+import { applyDrill } from "./lib/drills.js";
 import Pi from "./ui/Pi.jsx";
 import { EnCtx, Cosmos, Burst, Sheet, Bi } from "./ui/common.jsx";
 import {
@@ -212,6 +213,7 @@ export default function App() {
       return { ...s, feed: { ...f, saved } };
     }),
     dust: (n) => { update((s) => addXp(s, Date.now(), 0, n)); play("coin", S.sound); },
+    drill: (q, ok, ms) => update((s) => ({ ...s, drill: applyDrill(s, q, ok, ms) })),
   };
 
   const onFinish = (sum) => {

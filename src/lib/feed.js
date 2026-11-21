@@ -9,6 +9,7 @@
 import { CARDS, BY_ID, GEN, dueIds, learned, currentR } from "./learn.js";
 import { RANKS } from "../data/v2/meta.js";
 import { shuffle, pick, rng, dayKey } from "./util.js";
+import { nextDrill } from "./drills.js";
 
 export const FEED_NEW_CAP = 15;
 
@@ -79,7 +80,17 @@ export function makeFeed(getState, { labMap = {}, mode = "foryou" } = {}) {
   const reviewed = new Set();     // bu oturumda tekrar sorusu sorulan kartlar
   const factUsed = new Map();     // cid → Set(kind)
 
+  const recentSkills = [];
+  const sessionSeen = new Set();   // bu oturumda üretilmiş (henüz cevaplanmamış olabilir) sorular
   const touch = (cid) => { recent.push(cid); if (recent.length > 8) recent.shift(); };
+  /** İşlem/hafıza antrenmanı gönderisi (LOGOS + hız bankası; görülen soru tekrar gelmez) */
+  function drillPost() {
+    const q = nextDrill(getState(), r, recentSkills, undefined, sessionSeen);
+    if (!q) return null;
+    sessionSeen.add(q.hash);
+    recentSkills.push(q.skill); if (recentSkills.length > 6) recentSkills.shift();
+    return mk("drill", { d: q });
+  }
   const isRecent = (cid) => recent.slice(-4).includes(cid);
   const schedule = (gap, post) => pending.push({ at: idx + gap, post });
 
@@ -133,6 +144,7 @@ export function makeFeed(getState, { labMap = {}, mode = "foryou" } = {}) {
       intro: canNew ? (L.length < 10 ? 46 : 26) : 0,
       fact: factPool.length ? 30 : 0,
       practice: L.length ? 12 : 0,
+      drill: !due.length && !canNew ? 48 : L.length < 4 ? 12 : 26,
       special: sinceSpecial >= 12 ? 14 : 0,
     };
     const total = Object.values(w).reduce((a, b) => a + b, 0);
@@ -141,6 +153,7 @@ export function makeFeed(getState, { labMap = {}, mode = "foryou" } = {}) {
     for (const [k, v] of Object.entries(w)) { x -= v; if (x <= 0 && v > 0) { pickKey = k; break; } }
 
     if (pickKey === "special") { sinceSpecial = 0; return special(); }
+    if (pickKey === "drill") { const d = drillPost(); if (d) return d; }
     if (pickKey === "due") {
       const id = due[0];
       reviewed.add(id);
@@ -167,6 +180,20 @@ export function makeFeed(getState, { labMap = {}, mode = "foryou" } = {}) {
     return introPost(s) || mk("empty", { reason: "done" });
   }
 
+  /** Hız sekmesi: kesintisiz işlem antrenmanı; vadesi gelen formül tekrarları ve formül uygulamaları araya girer */
+  function nextSpeed() {
+    const s = getState();
+    const now = Date.now();
+    if (idx % 6 === 0) {
+      const due = dueIds(s, now).filter((id) => !reviewed.has(id) && !isRecent(id));
+      if (due.length) { reviewed.add(due[0]); return quizPost(due[0], "review"); }
+      const L = learned(s).filter((id) => BY_ID[id].g && GEN[BY_ID[id].g] && !isRecent(id));
+      if (L.length) { const id = pick(L, r); touch(id); return mk("quiz", { cid: id, purpose: "practice", mode: "apply" }); }
+    }
+    if (sinceSpecial >= 18 && answeredSinceChest >= 8) { sinceSpecial = 0; answeredSinceChest = 0; return mk("chest", { amount: 3 + Math.floor(r() * 6) }); }
+    return drillPost() || mk("empty", { reason: "done" });
+  }
+
   function nextSaved() {
     const s = getState();
     const ids = Object.keys(feedOf(s).saved).filter((id) => BY_ID[id]);
@@ -184,8 +211,9 @@ export function makeFeed(getState, { labMap = {}, mode = "foryou" } = {}) {
       idx++; sinceIntro++; sinceSpecial++;
       const pi = pending.findIndex((p) => p.at <= idx);
       if (pi >= 0) return pending.splice(pi, 1)[0].post;
-      return mode === "saved" ? nextSaved() : nextForYou();
+      return mode === "saved" ? nextSaved() : mode === "speed" ? nextSpeed() : nextForYou();
     },
+    drillAnswered() { answeredSinceChest++; },
     take(n) { const out = []; for (let i = 0; i < n; i++) { const p = this.next(); out.push(p); if (p.kind === "empty") break; } return out; },
     /** Cevap geldi: öğrenme mantığını sürdür. Döner: { grade, isNew, known } (App bunu uygular) */
     answered(post, ok, ms) {
